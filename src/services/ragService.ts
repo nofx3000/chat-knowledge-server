@@ -1,62 +1,74 @@
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { FaissStore } from "@langchain/community/vectorstores/faiss";
-import { Document } from "../models/Document";
+import { Document as LangchainDocument } from "langchain/document";
 import * as fs from "fs/promises";
+import * as path from "path";
 
 export class RAGService {
   private embeddings: OllamaEmbeddings;
-  private vectorStore: FaissStore | null = null;
+  private vectorStores: Map<number, FaissStore> = new Map();
 
   constructor() {
     this.embeddings = new OllamaEmbeddings({
-      //   baseUrl: "http://localhost:11434", // 确保这是您的Ollama服务器地址
-      model: "bge-large-embed", // 使用您想要的模型
+      model: "bge-large-embed",
     });
   }
 
-  async initializeVectorStore(documents: Document[]): Promise<void> {
-    const texts = await Promise.all(
-      documents.map((doc) => fs.readFile(doc.filePath, "utf-8"))
+  async getOrCreateVectorStore(baseId: number): Promise<FaissStore> {
+    if (this.vectorStores.has(baseId)) {
+      console.log(`vectorStore---${baseId}---exists`);
+      return this.vectorStores.get(baseId)!;
+    }
+    console.log(`creating new vectorStore....`);
+    const dirPath = path.join(
+      process.cwd(),
+      "knowledge_base",
+      baseId.toString()
     );
-    const metadatas = documents.map((doc) => ({
-      title: doc.title,
-      id: doc.id,
-    }));
+    const indexPath = path.join(dirPath, `db_index_${baseId}`);
 
-    this.vectorStore = await FaissStore.fromTexts(
-      texts,
-      metadatas,
+    let store: FaissStore = await FaissStore.fromDocuments(
+      [new LangchainDocument({ pageContent: "", metadata: { id: 0 } })],
       this.embeddings
     );
+    store.save(indexPath);
+
+    this.vectorStores.set(baseId, store);
+    return store;
   }
 
-  async addDocument(document: Document): Promise<void> {
-    if (!this.vectorStore) {
-      throw new Error("Vector store not initialized");
-    }
-
-    const content = await fs.readFile(document.filePath, "utf-8");
-    await this.vectorStore.addDocuments([
-      {
-        pageContent: content,
-        metadata: { title: document.title, id: document.id },
-      },
-    ]);
+  async addDocuments(
+    baseId: number,
+    documents: LangchainDocument[]
+  ): Promise<void> {
+    const store = await this.getOrCreateVectorStore(baseId);
+    console.log("store in ragService", store);
+    console.log("document in ragService", documents);
+    await store.addDocuments(documents);
+    const dirPath = path.join(
+      process.cwd(),
+      "knowledge_base",
+      baseId.toString()
+    );
+    const indexPath = path.join(dirPath, `db_index_${baseId}`);
+    store.save(indexPath);
   }
 
   async searchSimilarDocuments(
     baseId: number,
     query: string,
     k: number = 5
-  ): Promise<Document[]> {
-    if (!this.vectorStore) {
-      throw new Error("Vector store not initialized");
+  ): Promise<LangchainDocument[]> {
+    const store = await this.getOrCreateVectorStore(baseId);
+    return await store.similaritySearch(query, k);
+  }
+
+  private async directoryExists(dirPath: string): Promise<boolean> {
+    try {
+      await fs.access(dirPath);
+      return true;
+    } catch {
+      return false;
     }
-
-    const results = await this.vectorStore.similaritySearch(query, k);
-
-    const documentIds = results.map((result) => result.metadata.id);
-
-    return await Document.findAll({ where: { id: documentIds, baseId } });
   }
 }

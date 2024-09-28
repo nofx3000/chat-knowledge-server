@@ -1,27 +1,38 @@
 import { Context } from "koa";
-import { DocumentService } from "../services/documentService";
+import { BaseService } from "../services/baseService";
 import * as fs from "fs";
 import * as path from "path";
+import { RAGService } from "../services/ragService";
 
 export class BaseController {
-  private documentService: DocumentService;
+  private baseService: BaseService;
+  private ragService: RAGService;
 
   constructor() {
-    this.documentService = new DocumentService();
+    this.baseService = new BaseService();
+    this.ragService = new RAGService();
   }
 
   getAllBases = async (ctx: Context) => {
-    ctx.body = await this.documentService.getAllBases();
+    ctx.body = await this.baseService.getAllBases();
   };
 
-  getBaseById = async (ctx: Context) => {
+  getBaseWithDocuments = async (ctx: Context) => {
     const { baseid } = ctx.params;
-    ctx.body = await this.documentService.getBaseById(parseInt(baseid));
+    const result = await this.baseService.getBaseWithDocuments(
+      parseInt(baseid)
+    );
+    if (result) {
+      ctx.body = result;
+    } else {
+      ctx.status = 404;
+      ctx.body = { error: "Base not found" };
+    }
   };
 
   deleteBase = async (ctx: Context) => {
     const { baseid } = ctx.params;
-    await this.documentService.deleteBase(parseInt(baseid));
+    await this.baseService.deleteBase(parseInt(baseid));
     ctx.status = 204; // No Content
   };
 
@@ -35,7 +46,8 @@ export class BaseController {
     }
 
     try {
-      const base = await this.documentService.createBase(base_name);
+      // mysql创建一条base记录
+      const base = await this.baseService.createBase(base_name);
 
       // 创建文件夹
       const dirPath = path.join(
@@ -45,9 +57,13 @@ export class BaseController {
       );
       fs.mkdirSync(dirPath, { recursive: true });
 
+      // 初始化FAISS向量数据库
+      await this.ragService.getOrCreateVectorStore(base.id);
+
       ctx.status = 201;
       ctx.body = { id: base.id };
     } catch (error) {
+      console.log(error);
       ctx.status = 500;
       ctx.body = { error: "Failed to create base" };
     }

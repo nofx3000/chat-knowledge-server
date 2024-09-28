@@ -1,0 +1,18 @@
+我要做一个基于LLMs的RAG技术构建本地知识库的应用，Koa2构建web应用服务器，数据库使用mysql，数据库交互使用sequilize-typescript，并可以使用langchain链接ollama server，向量数据库使用FAISS
+
+mysql数据库中的表设计：
+bases: id(number)知识库id name(string)知识库名称 dir(string)知识库地址
+books: id(number)资料id title(string)资料名称
+
+使用restful api，按照下面列表创建路由：
+get /base 获取知识库列表
+get /base/:baseid 获取id为baseid知识库的信息,以及与其关联的所有doucments
+
+post /base 创建知识库，post请求携带一个参数base_name，请求成功后会在mysql的bases表中存储一个name为base_name的记录。存储成功后接收返回id，在服务器根目录knowledge_base文件夹中创建一个名为id的文件夹，随后FAISS数据库在这个文件夹内，创建一个db_index为id的本地向量数据库文件。
+
+delete /base/:baseid 删除id为baseid的知识库
+delete /books/:bookid 删除id为baseid的知识库中id为bookid的资料
+
+post /base/:baseid/books 向id为baseid的知识库上传知识库资料, 路由接收前端上传组件传过来的文件（支持多文件上传，文件格式支持txt,pdf,doc,docx，无文件大小限制)，上传后的文件保存在根目录的knowledge_base/:baseid文件夹内, 随后服务器读取该文件夹内的所有文件，使用langchain_text_splitters中的RecursiveCharacterTextSplitter对读取的文件进行切片，随后使用embedding模型存储在向量数据库中。
+
+post /dialogue/:baseid 向id为baseid的知识库发送信息。服务器获取到请求后，获取服务器knowledge_base/baseid/db_index_[baseid]文件夹内的向量数据库，然后获得向量数据的retriever，再使用langchain中的ConversationalRetrievalChain结合本地ollama中的大语言模型，得到大语言模型的qa，将用户发送过来的信息代入qa，得到大语言模型的回复。

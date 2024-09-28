@@ -23,7 +23,11 @@ export class DocumentService {
     title: string,
     filePath: string
   ): Promise<[number, Document[]]> {
-    return await Document.update({ title, filePath }, { where: { id } });
+    const [affectedCount, affectedRows] = await Document.update(
+      { title, filePath },
+      { where: { id }, returning: true }
+    );
+    return [affectedCount, affectedRows];
   }
 
   async deleteDocument(id: number): Promise<number> {
