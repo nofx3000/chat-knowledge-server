@@ -8,10 +8,6 @@ import { Document as LangchainDocument } from "langchain/document";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
 import { TextLoader } from "langchain/document_loaders/fs/text";
-import { ConversationalRetrievalQAChain } from "langchain/chains";
-import { FaissStore } from "@langchain/community/vectorstores/faiss";
-import { ChatOllama } from "@langchain/ollama";
-import { OllamaEmbeddings } from "@langchain/ollama";
 
 export class DocumentController {
   private documentService: DocumentService;
@@ -30,7 +26,7 @@ export class DocumentController {
         cb(null, uploadPath);
       },
       filename: function (req, file, cb) {
-        cb(null, file.originalname);
+        cb(null, Buffer.from(file.originalname, "latin1").toString("utf8"));
       },
     });
     const upload = multer({
@@ -65,8 +61,8 @@ export class DocumentController {
     console.log("------------------in uploadfiles", files);
 
     const textSplitter = new RecursiveCharacterTextSplitter({
-      chunkSize: 500,
-      chunkOverlap: 40,
+      chunkSize: 20,
+      chunkOverlap: 4,
     });
     for (const file of files) {
       console.log("___++++++_____", file.path);
@@ -96,7 +92,7 @@ export class DocumentController {
             pageContent: chunk.pageContent,
             metadata: {
               ...chunk.metadata,
-              source: file.originalname,
+              source: Buffer.from(file.originalname, "latin1").toString("utf8"),
               baseid: parseInt(baseid),
             },
           })
@@ -107,7 +103,7 @@ export class DocumentController {
       // 资料信息添加到mysql数据库
       await this.documentService.createDocument(
         parseInt(baseid),
-        file.originalname,
+        Buffer.from(file.originalname, "latin1").toString("utf8"),
         file.path
       );
     }
