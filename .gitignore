@@ -4,6 +4,9 @@ node_modules/
 # Knowledge base directory
 knowledge_base/
 
+server/
+
+*.zip
 # Logs
 logs
 *.log
