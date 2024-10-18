@@ -1,10 +1,11 @@
 import { Context } from "koa";
 import { RAGService } from "../services/ragService";
 import path from "path";
-import { FaissStore } from "@langchain/community/vectorstores/faiss";
+import { HNSWLib } from "@langchain/community/vectorstores/hnswlib";
 import { ChatOllama } from "@langchain/ollama";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { ConversationalRetrievalQAChain } from "langchain/chains";
+
 export class DialogueController {
   private ragService: RAGService;
 
@@ -37,11 +38,12 @@ export class DialogueController {
         model: "bge-large-embed",
       });
 
-      // 加载 FAISS 向量数据库
-      const vectorStore = await FaissStore.load(vectorDbPath, embeddings);
+      // 加载 HNSWLib 向量数据库
+      const vectorStore = await HNSWLib.load(vectorDbPath, embeddings);
 
       // 创建检索器
       const retriever = vectorStore.asRetriever();
+
       // 初始化 ChatOllama 模型
       const model = new ChatOllama({
         baseUrl: "http://127.0.0.1:11434",
@@ -50,10 +52,9 @@ export class DialogueController {
         callbacks: [
           {
             async handleLLMNewToken(token) {
-              console.log("???????????????????????????", token);
+              console.log("Token received:", token);
               ctx.res.write(`data: ${JSON.stringify({ token })}\n\n`);
               await new Promise((resolve) => setTimeout(resolve, 0));
-              // streamedResponse += token;
             },
           },
         ],
@@ -77,9 +78,10 @@ export class DialogueController {
         chat_history: chat_history,
       });
 
+      // 注意：这部分代码被注释掉了，如果您想使用流式响应，可以取消注释
       // for await (const chunk of stream) {
       //   if (chunk) {
-      //     console.log("------------", chunk);
+      //     console.log("Chunk received:", chunk);
       //     ctx.res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
       //     await new Promise((resolve) => setTimeout(resolve, 0));
       //   }

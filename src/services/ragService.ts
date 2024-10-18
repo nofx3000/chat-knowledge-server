@@ -1,12 +1,12 @@
 import { OllamaEmbeddings } from "@langchain/ollama";
-import { FaissStore } from "@langchain/community/vectorstores/faiss";
+import { HNSWLib } from "@langchain/community/vectorstores/hnswlib";
 import { Document as LangchainDocument } from "langchain/document";
 import * as fs from "fs/promises";
 import * as path from "path";
 
 export class RAGService {
   private embeddings: OllamaEmbeddings;
-  private vectorStores: Map<number, FaissStore> = new Map();
+  private vectorStores: Map<number, HNSWLib> = new Map();
 
   constructor() {
     this.embeddings = new OllamaEmbeddings({
@@ -14,7 +14,7 @@ export class RAGService {
     });
   }
 
-  async getOrCreateVectorStore(baseId: number): Promise<FaissStore> {
+  async getOrCreateVectorStore(baseId: number): Promise<HNSWLib> {
     if (this.vectorStores.has(baseId)) {
       console.log(`vectorStore---${baseId}---exists`);
       return this.vectorStores.get(baseId)!;
@@ -27,11 +27,15 @@ export class RAGService {
     );
     const indexPath = path.join(dirPath, `db_index_${baseId}`);
 
-    let store: FaissStore = await FaissStore.fromDocuments(
-      [new LangchainDocument({ pageContent: "", metadata: { id: 0 } })],
-      this.embeddings
-    );
-    store.save(indexPath);
+    let store: HNSWLib;
+    if (await this.directoryExists(indexPath)) {
+      store = await HNSWLib.load(indexPath, this.embeddings);
+    } else {
+      store = await HNSWLib.fromDocuments(
+        [new LangchainDocument({ pageContent: "", metadata: { id: 0 } })],
+        this.embeddings
+      );
+    }
 
     this.vectorStores.set(baseId, store);
     return store;
@@ -51,7 +55,7 @@ export class RAGService {
       baseId.toString()
     );
     const indexPath = path.join(dirPath, `db_index_${baseId}`);
-    store.save(indexPath);
+    await store.save(indexPath);
   }
 
   async searchSimilarDocuments(
