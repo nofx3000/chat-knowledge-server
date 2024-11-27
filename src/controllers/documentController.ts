@@ -69,8 +69,9 @@ export class DocumentController {
     }
 
     const textSplitter = new RecursiveCharacterTextSplitter({
-      chunkSize: 20,
-      chunkOverlap: 4,
+      chunkSize: 200,
+      chunkOverlap: 40,
+      separators: ["\n", "。", "！", "？", "，", "、", ",", "，", "。"],
     });
 
     try {
