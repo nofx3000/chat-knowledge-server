@@ -6,6 +6,9 @@ import { ChatOllama } from "@langchain/ollama";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { CommaSeparatedListOutputParser } from "@langchain/core/output_parsers";
 import { ConversationalRetrievalQAChain } from "langchain/chains";
+import { OLLAMA_BASE_URL } from "../config/ollama";
+
+console.log("OLLAMA_BASE_URL:", OLLAMA_BASE_URL);
 
 export class DialogueController {
   private ragService: RAGService;
@@ -16,7 +19,7 @@ export class DialogueController {
 
   getOutlineList = async (ctx: Context, next: () => Promise<void>) => {
     const model = new ChatOllama({
-      baseUrl: "http://127.0.0.1:11434",
+      baseUrl: OLLAMA_BASE_URL,
       model: "qwen2-7b",
     });
     const output_parser = new CommaSeparatedListOutputParser();
@@ -104,7 +107,7 @@ export class DialogueController {
 
     // 初始化 OllamaEmbeddings
     const embeddings = new OllamaEmbeddings({
-      baseUrl: "http://127.0.0.1:11434",
+      baseUrl: OLLAMA_BASE_URL,
       model: "bge-large-embed",
     });
 
@@ -116,7 +119,7 @@ export class DialogueController {
 
     // 初始化 ChatOllama 模型
     const model = new ChatOllama({
-      baseUrl: "http://127.0.0.1:11434",
+      baseUrl: OLLAMA_BASE_URL,
       model: "qwen2-7b", // 或者您使用的其他模型名称
       streaming: true,
       callbacks: [
@@ -183,7 +186,7 @@ export class DialogueController {
 
       // 初始化 ChatOllama 模型
       const model = new ChatOllama({
-        baseUrl: "http://127.0.0.1:11434",
+        baseUrl: OLLAMA_BASE_URL,
         model: "qwen2-7b",
         streaming: true,
         callbacks: [

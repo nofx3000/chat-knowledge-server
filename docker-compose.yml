@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  app:
+    image: chat-server:latest
+    ports:
+      - "3001:3001"
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=rag_knowledge_base
+      - OLLAMA_HOST=ollama:11434
+    depends_on:
+      - mysql
+      - ollama
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=rag_knowledge_base
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./models:/root/.ollama/models  # 挂载本地的 gguf 文件到容器内的 /root/.ollama/models
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  mysql_data:
+  ollama_data: 

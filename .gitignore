@@ -1,3 +1,7 @@
+models
+mysql
+
+*.tar
 # Dependency directories
 node_modules/
 
