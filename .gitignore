@@ -75,16 +75,11 @@ typings/
 .vuepress/dist
 
 # Serverless directories
-.serverless/
-
-# FuseBox cache
-.fusebox/
-
-# DynamoDB Local files
-.dynamodb/
-
 # TypeScript output
 dist/
+server
+node_modules
+knowledge_base
 
 # IDE / Editor directories
 .idea/

@@ -132,7 +132,7 @@ export class DialogueController {
 
     // 创建对话检索链
     const chain = ConversationalRetrievalQAChain.fromLLM(model, retriever, {
-      // returnSourceDocuments: true,
+      returnSourceDocuments: true,
     });
 
     const stream = await chain.stream({
