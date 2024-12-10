@@ -1,6 +1,7 @@
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { HNSWLib } from "@langchain/community/vectorstores/hnswlib";
 import { Document as LangchainDocument } from "langchain/document";
+import { OLLAMA_BASE_URL } from "../config/ollama";
 import * as fs from "fs/promises";
 import * as path from "path";
 
@@ -11,6 +12,7 @@ export class RAGService {
   constructor() {
     this.embeddings = new OllamaEmbeddings({
       model: "bge-large-embed",
+      baseUrl: OLLAMA_BASE_URL,
     });
   }
 
