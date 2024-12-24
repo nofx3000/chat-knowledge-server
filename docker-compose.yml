@@ -1,6 +1,12 @@
 version: '3.8'
 
 services:
+  front:
+    image: chat-front:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../chat-knowledge-front/src/:/app/src/
   app:
     image: chat-server:latest
     ports:
@@ -14,6 +20,8 @@ services:
     depends_on:
       - mysql
       - ollama
+    volumes:
+      - ./src/:/app/src/
 
   mysql:
     image: mysql:8.0
