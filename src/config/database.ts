@@ -9,8 +9,8 @@ const sequelize = new Sequelize({
   username: "root",
   password: "root",
   port: 3306,
-  // host: "127.0.0.1",
-  host: "mysql",
+  host: "127.0.0.1",
+  // host: "mysql",
   dialectModule: mysql2,
   models: [Document, Base], // 添加所有的模型
 });

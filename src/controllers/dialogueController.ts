@@ -23,14 +23,14 @@ export class DialogueController {
       model: "qwen2-7b",
     });
     const output_parser = new CommaSeparatedListOutputParser();
-    const { question: outline } = ctx.request.body as {
-      question: string;
+    const { payload } = ctx.request.body as {
+      payload: Record<string, any>;
     };
     console.log("Request body:", ctx.request.body);
     const prompt = `我将给你一个研究报告的提纲，请你帮我提取出所有一级标题的提纲内容。
            提纲如下：
            ###
-           ${outline}
+           ${payload.outline}
            ###
            请按照以下格式回复：
           "1.<一级标题1>: 1.1<二级标题1>; 1.2<二级标题2>; ...", "2.<一级标题2>: 2.1<二级标题1>; 2.2<二级标题2>; ...", ...",
@@ -93,9 +93,9 @@ export class DialogueController {
   }) => {
     console.log("开始生成提纲内容：", outline);
 
-    const { chat_history, question } = ctx.request.body as {
+    const { chat_history, payload } = ctx.request.body as {
       chat_history: [string, string][];
-      question: string;
+      payload: Record<string, any>;
     };
     // 获取向量数据库路径
     const vectorDbPath = path.join(
@@ -138,8 +138,8 @@ export class DialogueController {
       returnSourceDocuments: true,
     });
 
-    const stream = await chain.stream({
-      question: `你是一位中国的军事地理研究专家，下面给你一段军事地理研究报告某一段落的提纲，请你对其内容进行扩写。
+    await chain.stream({
+      question: `你是一位${payload.contentType}专家，下面给你一段${payload.contentType}文章某一段落的提纲，请你对其内容进行扩写。
            提纲如下：
            ###
            ${outline}
@@ -181,8 +181,8 @@ export class DialogueController {
 
   generateOutline = async (ctx: Context) => {
     try {
-      const { question: title } = ctx.request.body as { question: string };
-      console.log("title:", title);
+      const { payload } = ctx.request.body as { payload: Record<string, any> };
+      console.log("payload:", payload);
 
       // 初始化 ChatOllama 模型
       const model = new ChatOllama({
@@ -201,43 +201,38 @@ export class DialogueController {
       });
 
       const prompt = `
-      你是一位专业的军事地理研究专家，请你仿照下面给出的提纲示例的写作风格，帮我生成一份关于"${title}"的研究报告提纲。
-      提纲示例1:
-      ###
-      1.萨赫勒地区地缘环境分析
-          1.1 地理环境
-          1.2 人文环境
-      2.萨赫勒地区恐怖主义发展现状
-          2.1 恐怖势力构成复杂，内部对抗激烈
-          2.2 恐怖组织本土融合，控制能力增强
-          2.3 恐怖组织跨国犯罪，活动区域延伸
-      3.萨赫勒地区恐怖组织肆虐的原因分析
-          3.1 地理位置独特，成为恐怖组织繁衍温床
-          3.2 经济严重贫困，恐怖主义持续扩散影响
-          3.3 政治治理脆弱，恐怖组织难以彻底遏制
-      4.萨赫勒地区恐怖主义发展对我影响
-          4.1 动荡局势威胁我国在非的海外利益
-          4.2 积极推进反恐提高我国国际影响力
-      ###
+      你是一位${payload.contentType}领域专家，请你帮我生成一份关于"${payload.title}"的文章提纲
       要求：
-      1. 提纲应包含5个主要章节（一级标题），每个章节下设2-3个二级标题
-      2. 一级标题使用数字编号（1、2、3...），二级标题使用小数点编号（1.1、1.2、1.3...）
-      3. 不设立结论或展望相关的章节
-      4. 提纲结构要清晰，逻辑性强，涵盖主题的各个重要方面
-      5. 提纲内容要专业、严谨，符合学术研究报告的标准
-      6. 每个标题都应简洁明了，不超过20个字
-      7. 确保提纲的深度和广度足以支撑一份8000-10000字的研究报告
-      8. 输出不使用markdown格式
+      ###
+      ${payload.requirements}
+      ###
 
       请按照以下格式输出：
+      ###
       1. 一级标题1
         1.1 二级标题1
+          (一) 三级标题1
+          (二) 三级标题2
+          (三) 三级标题3
+          ...
         1.2 二级标题2
-        ...
+          (一) 三级标题1
+          (二) 三级标题2
+          (三) 三级标题3
+          ...
       2. 一级标题2
         2.1 二级标题1
+          (一) 三级标题1
+          (二) 三级标题2
+          (三) 三级标题3
+          ...
         2.2 二级标题2
-        ...`;
+          (一) 三级标题1
+          (二) 三级标题2
+          (三) 三级标题3
+          ...
+      ###  
+          `;
 
       ctx.set({
         "Content-Type": "text/event-stream",
