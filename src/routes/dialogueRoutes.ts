@@ -6,10 +6,10 @@ const dialogueController = new DialogueController();
 
 router.post(
   "/generateContent/:baseid",
-  dialogueController.getOutlineList,
+  dialogueController.getOutlineObject,
   dialogueController.postDialogue
 );
-router.get("/getOutlineList", dialogueController.getOutlineList);
+router.get("/getOutlineList", dialogueController.getOutlineObject);
 router.post("/generateOutline", dialogueController.generateOutline);
 
 export default router;

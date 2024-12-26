@@ -1,0 +1,113 @@
+{
+  "chapters": [
+    {
+      "level": 1,
+      "title": "俄乌冲突背景与历史",
+      "number": "1",
+      "subChapters": [
+        {
+          "level": 2,
+          "title": "俄乌关系演变",
+          "number": "1.1",
+          "subChapters": [
+            {
+              "level": 3,
+              "title": "一冷战后的乌克兰独立与东欧剧变",
+              "number": "(一)"
+            },
+            {
+              "level": 3,
+              "title": "二科索沃战争对俄乌关系的影响",
+              "number": "(二)"
+            },
+            {
+              "level": 3,
+              "title": "三独立后乌克兰的\"亲西方\"政策",
+              "number": "(三)"
+            }
+          ]
+        },
+        {
+          "level": 2,
+          "title": "军事战略与地理影响",
+          "number": "1.2",
+          "subChapters": [
+            { "level": 3, "title": "一乌克兰领土的战略位置", "number": "(一)" },
+            { "level": 3, "title": "二军事部署与战术运用", "number": "(二)" },
+            {
+              "level": 3,
+              "title": "三后勤补给线的安全风险分析",
+              "number": "(三)"
+            }
+          ]
+        },
+        {
+          "level": 2,
+          "title": "军事冲突的技术与武器",
+          "number": "1.3",
+          "subChapters": [
+            {
+              "level": 3,
+              "title": "一现代武器装备在冲突中的应用",
+              "number": "(一)"
+            },
+            { "level": 3, "title": "二战术无人机与信息战", "number": "(二)" },
+            {
+              "level": 3,
+              "title": "三智能化、无人化武器的发展趋势",
+              "number": "(三)"
+            }
+          ]
+        },
+        {
+          "level": 2,
+          "title": "地理信息系统的应用",
+          "number": "1.4",
+          "subChapters": [
+            { "level": 3, "title": "一实时情报收集与分析", "number": "(一)" },
+            {
+              "level": 3,
+              "title": "二地理信息系统在战场规划与管理",
+              "number": "(二)"
+            }
+          ]
+        },
+        {
+          "level": 2,
+          "title": "国际反应与外交动向",
+          "number": "1.5",
+          "subChapters": [
+            { "level": 3, "title": "一国际制裁及其效果评估", "number": "(一)" },
+            { "level": 3, "title": "二联合国安理会决议解读", "number": "(二)" }
+          ]
+        },
+        {
+          "level": 2,
+          "title": "人道主义危机与平民保护",
+          "number": "1.6",
+          "subChapters": [
+            { "level": 3, "title": "一冲突对基础设施的影响", "number": "(一)" },
+            {
+              "level": 3,
+              "title": "二国际红十字会的角色与限制",
+              "number": "(二)"
+            }
+          ]
+        },
+        {
+          "level": 2,
+          "title": "冲突对经济、社会的影响",
+          "number": "1.7",
+          "subChapters": [
+            {
+              "level": 3,
+              "title": "一国内经济的衰退与复苏策略",
+              "number": "(一)"
+            },
+            { "level": 3, "title": "二国际关系的重塑", "number": "(二)" }
+          ]
+        }
+      ]
+    }
+  ]
+}
