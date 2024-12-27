@@ -11,5 +11,6 @@ router.post(
 );
 router.get("/getOutlineList", dialogueController.getOutlineObject);
 router.post("/generateOutline", dialogueController.generateOutline);
+router.get("/stop", dialogueController.stopGeneration);
 
 export default router;
