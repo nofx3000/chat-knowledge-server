@@ -41,6 +41,7 @@ export class DialogueController {
       });
 
       const prompt = `
+      !!!不展现r1模型特有的思考过程!!!
       你是一位${payload.contentType}领域专家，请你帮我生成一份关于"${payload.title}"的文章提纲
       要求：
       ###
@@ -128,6 +129,7 @@ export class DialogueController {
 
       // 将结果存储在 ctx.state 中
       ctx.state.outlineObject = outlineObject;
+      ctx.state.outlineString = payload.outline
       await next();
     } catch (error) {
       console.error("Error in getOutlineObject:", error);
@@ -171,7 +173,8 @@ export class DialogueController {
               await this.generateContent({
                 ctx,
                 baseid,
-                outline: title,
+                title,
+                outline: ctx.state.outlineString
               });
               ctx.res.write(`data: ${JSON.stringify({ token: "\n\n" })}\n\n`);
             }
@@ -197,10 +200,12 @@ export class DialogueController {
   private generateContent = async ({
     ctx,
     baseid,
+    title,
     outline,
   }: {
     ctx: Context;
     baseid: string;
+    title: string;
     outline: string;
   }) => {
     try {
@@ -208,7 +213,7 @@ export class DialogueController {
       this.abortController = new AbortController();
       const signal = this.abortController.signal;
 
-      console.log("开始生成提纲内容：", outline);
+      console.log("开始生成提纲内容：", title);
 
       const { chat_history, payload } = ctx.request.body as {
         chat_history: [string, string][];
@@ -258,7 +263,8 @@ export class DialogueController {
       });
 
       await chain.stream({
-        question: `你是一位${payload.contentType}专家，请你帮我撰写一段${payload.contentType}文章的段落，标题为${outline}。
+        question: `你是一位${payload.contentType}专家。
+           现给你一篇提纲为#${outline}#的文章，请你帮我撰写标题为${title}的这一文章段落。
            要求：1.这部分内容字数为500个左右中文简体汉字。
                 2.直接输出内容，不要重复标题。
                 3.不要擅自修改或添加标题，不要擅自添加小标题或划分段落。
