@@ -1,19 +1,14 @@
 import { Context } from "koa";
 import { RAGService } from "../services/ragService";
+import modelService from "../services/modelService";
 import path from "path";
 import { HNSWLib } from "@langchain/community/vectorstores/hnswlib";
-import { ChatOllama } from "@langchain/ollama";
-import { OllamaEmbeddings } from "@langchain/ollama";
-import { CommaSeparatedListOutputParser } from "@langchain/core/output_parsers";
 import { ConversationalRetrievalQAChain } from "langchain/chains";
-import { OLLAMA_BASE_URL, TEXT_MODEL, EMBED_MODEL } from "../config/ollama";
 import { JsonOutputParser } from "@langchain/core/output_parsers";
 
-console.log("OLLAMA_BASE_URL:", OLLAMA_BASE_URL);
 
 export class DialogueController {
   private ragService: RAGService;
-  private abortController: AbortController | null = null;
 
   constructor() {
     this.ragService = new RAGService();
@@ -24,24 +19,9 @@ export class DialogueController {
       const { payload } = ctx.request.body as { payload: Record<string, any> };
       console.log("payload:", payload);
 
-      // 初始化 ChatOllama 模型
-      const model = new ChatOllama({
-        baseUrl: OLLAMA_BASE_URL,
-        model: TEXT_MODEL,
-        streaming: true,
-        callbacks: [
-          {
-            async handleLLMNewToken(token) {
-              // console.log("Token received:", token);
-              ctx.res.write(`data: ${JSON.stringify({ token })}\n\n`);
-              await new Promise((resolve) => setTimeout(resolve, 0));
-            },
-          },
-        ],
-      });
+      const model = await modelService.createOutlineModel(ctx);
 
       const prompt = `
-      !!!不展现r1模型特有的思考过程!!!
       你是一位${payload.contentType}领域专家，请你帮我生成一份关于"${payload.title}"的文章提纲
       要求：
       ###
@@ -95,19 +75,26 @@ export class DialogueController {
   };
 
   getOutlineObject = async (ctx: Context, next: () => Promise<void>) => {
-    const model = new ChatOllama({
-      baseUrl: OLLAMA_BASE_URL,
-      model: TEXT_MODEL,
-      temperature: 0,
-    });
+    // ctx.set({
+    //   "Content-Type": "text/event-stream",
+    //   "Cache-Control": "no-cache",
+    //   Connection: "keep-alive",
+    // });
 
+    // ctx.status = 200;
+    // const model = await modelService.createContentModel_silliconFlow(ctx, null as any);
+    // model.invoke(`你是一位军事地理专家。
+    //       请你帮我撰写标题为俄乌冲突的这一文章段落。`)
+
+    //       ctx.res.write("data: [DONE]\n\n");
+    //   ctx.res.end();
+
+    const model = modelService.createJsonModel();
     const parser = new JsonOutputParser();
 
     const { payload } = ctx.request.body as {
       payload: Record<string, any>;
     };
-
-    console.log("======================", payload.outline);
 
     const prompt = `我将给你一个研究报告的提纲，请你提取出所有标题的内容并转换为JSON格式。
            以下面模版进行输出
@@ -139,6 +126,9 @@ export class DialogueController {
   };
 
   postDialogue = async (ctx: Context) => {
+    const { payload } = ctx.request.body as { payload: Record<string, any> };
+    console.log('in postDialogue payload--------', payload);
+
     try {
       console.log("Ctx.outlineObject:", ctx.state.outlineObject);
       const outlineObject = ctx.state.outlineObject;
@@ -153,40 +143,35 @@ export class DialogueController {
 
       ctx.status = 200;
 
+      type titlesObj = {
+        [key: string]: {
+          [subKey: string]: string[];
+        };
+      };
       // 定义深度优先遍历函数
-      const dfsTraverse = async (obj: any, level: number = 1) => {
+      const titlesTraverse = async (obj: titlesObj, level: number = 1) => {
+        console.log("======================", JSON.stringify(obj));
         for (const [key, value] of Object.entries(obj)) {
-          // 输出当前节点的标题
-          console.log(`Level ${level}: ${key}`);
-          console.log(`value : ${value}`);
           ctx.res.write(
-            `data: ${JSON.stringify({ token: key.trim() + "\n\n" })}\n\n`
+            `data: ${JSON.stringify({ token: `### ${key.trim()}` + "\n\n" })}\n\n`
           );
-          if (Array.isArray(value)) {
-            // 处理三级标题（数组）
-            for (const title of value) {
-              console.log(`Level 3: ${title}`);
-              ctx.res.write(
-                `data: ${JSON.stringify({ token: title.trim() + "\n\n" })}\n\n`
-              );
-              // 只对三级标题生成内容
-              await this.generateContent({
-                ctx,
-                baseid,
-                title,
-                outline: ctx.state.outlineString
-              });
-              ctx.res.write(`data: ${JSON.stringify({ token: "\n\n" })}\n\n`);
-            }
-          } else if (typeof value === "object" && value !== null) {
-            // 处理二级标题（对象）
-            await dfsTraverse(value, level + 1);
+          for (const [subKey, subValue] of Object.entries(value)) {
+            ctx.res.write(
+              `data: ${JSON.stringify({ token: `#### ${subKey.trim()}` + "\n\n" })}\n\n`
+            );
+            await this.generateContent({
+              ctx,
+              baseid,
+              title: payload.title,
+              subtitles: [key, subKey, subValue.join(',')],
+            });
+            ctx.res.write(`data: ${JSON.stringify({ token: "\n\n" })}\n\n`);
           }
         }
       };
 
       // 开始遍历
-      await dfsTraverse(outlineObject);
+      await titlesTraverse(outlineObject);
 
       ctx.res.write("data: [DONE]\n\n");
       ctx.res.end();
@@ -201,19 +186,19 @@ export class DialogueController {
     ctx,
     baseid,
     title,
-    outline,
+    subtitles,
   }: {
     ctx: Context;
     baseid: string;
     title: string;
-    outline: string;
+    subtitles: any[];
   }) => {
     try {
-      // 创建新的中止控制器
-      this.abortController = new AbortController();
-      const signal = this.abortController.signal;
+      const abortController = new AbortController();
+      modelService.setAbortController(abortController);
+      const signal = abortController.signal;
 
-      console.log("开始生成提纲内容：", title);
+      console.log("开始生成提纲内容：", subtitles[2]);
 
       const { chat_history, payload } = ctx.request.body as {
         chat_history: [string, string][];
@@ -228,83 +213,59 @@ export class DialogueController {
       );
 
       // 初始化 OllamaEmbeddings
-      const embeddings = new OllamaEmbeddings({
-        baseUrl: OLLAMA_BASE_URL,
-        model: EMBED_MODEL,
-      });
+      const embedModel = modelService.createEmbedModel()
 
       // 加载 HNSWLib 向量数据库
-      const vectorStore = await HNSWLib.load(vectorDbPath, embeddings);
+      const vectorStore = await HNSWLib.load(vectorDbPath, embedModel);
 
       // 创建检索器
-      const retriever = vectorStore.asRetriever();
+      const retriever = vectorStore.asRetriever({});
 
       // 初始化 ChatOllama 模型时添加 signal
-      const model = new ChatOllama({
-        baseUrl: OLLAMA_BASE_URL,
-        model: TEXT_MODEL,
-        streaming: true,
-        callbacks: [
-          {
-            async handleLLMNewToken(token) {
-              if (signal.aborted) {
-                throw new Error("Generation aborted");
-              }
-              ctx.res.write(`data: ${JSON.stringify({ token })}\n\n`);
-              await new Promise((resolve) => setTimeout(resolve, 0));
-            },
-          },
-        ],
-      });
+      const model = await modelService.createContentModel_silliconFlow(ctx, signal);
+      // model.invoke(`你是一位${payload.contentType}专家。
+      //       请你帮我撰写标题为${title}的这一文章段落。`)
 
       // 创建对话检索链
       const chain = ConversationalRetrievalQAChain.fromLLM(model, retriever, {
         returnSourceDocuments: true,
       });
-
       await chain.stream({
-        question: `你是一位${payload.contentType}专家。
-           现给你一篇提纲为#${outline}#的文章，请你帮我撰写标题为${title}的这一文章段落。
-           要求：1.这部分内容字数为500个左右中文简体汉字。
-                2.直接输出内容，不要重复标题。
-                3.不要擅自修改或添加标题，不要擅自添加小标题或划分段落。
-                4.只给出实质性内容，不需要过渡性语言。
-                5.不要写结论，不做总结、写结语，不要使用"综上所述"、"总之"等词汇。
-                6.内容不要有列表。
-                7.请适当从资料中筛选具体示例添加到文内。
+        question: `你是一位${payload.contentType}专家，请你帮我撰写一个题目为《${title}》的${payload.contentType}报告文章段落。
+           这个段落位于一标题《${subtitles[0]}》中的二级标题《${subtitles[1]}》下面。
+           要你撰写的内容是三级标题中的内容，题目分别是${subtitles[2]}。
+           要求：1.这部分内容字数为3000个左右中文简体汉字。
+                2.内容要紧跟时事，根据你所掌握的最新的知识进行撰写。
+                3.不重复一级和二级标题，也不要擅自更改标题。
+                4.不要写结论，不做总结、写结语，不要使用"综上所述"、"总之"等词汇。
+                5.内容不要有列表。
+                6.请适当从知识库中筛选具体示例添加到文内。
+                7.不使用markdown格式
            `,
         chat_history: chat_history,
         signal,
       });
-
-      // 注意：这部分码被注释掉了，如果您想使用流式响应，可以取消注释
-      // for await (const chunk of stream) {
-      //   if (chunk) {
-      //     console.log("Chunk received:", chunk);
-      //     ctx.res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
-      //     await new Promise((resolve) => setTimeout(resolve, 0));
-      //   }
-      // }
     } catch (error) {
       if ((error as any).message === "Generation aborted") {
         console.log("Generation was aborted");
         ctx.res.write(
           `data: ${JSON.stringify({ token: "\n\n[已停止生成]" })}\n\n`
         );
+        ctx.res.end();
       } else {
         console.error("Error in generateContent:", error);
         throw error;
       }
     } finally {
-      this.abortController = null;
+      modelService.clearAbortController();
     }
   };
 
-  // 添加停止生成的方法
   stopGeneration = async (ctx: Context) => {
     try {
-      if (this.abortController) {
-        this.abortController.abort();
+      const abortController = modelService.getAbortController();
+      if (abortController) {
+        abortController.abort();
         ctx.status = 200;
         ctx.body = { message: "Generation stopped" };
       } else {
